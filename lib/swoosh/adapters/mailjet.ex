@@ -38,7 +38,7 @@ defmodule Swoosh.Adapters.Mailjet do
         {:ok, %{id: get_message_id(body)}}
 
       {:ok, error_code, _headers, body} when error_code >= 400 ->
-        {:error, {error_code, body}}
+        {:error, {error_code, Swoosh.json_library().decode!(body)}}
 
       {:error, reason} ->
         {:error, reason}
