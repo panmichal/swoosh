@@ -87,6 +87,55 @@ defmodule Swoosh.Adapters.MailjetTest do
     assert Mailjet.deliver(email, config) == {:ok, %{id: 123_456_789}}
   end
 
+  test "delivery/1 - valid email with template ID and variables results in message ID",
+       %{
+         bypass: bypass,
+         config: config,
+         valid_email: email
+       } do
+    Bypass.expect(bypass, fn conn ->
+      conn = parse(conn)
+
+      body_params = %{
+        "Messages" => [
+          %{
+            "From" => %{
+              "Email" => "sender@example.com",
+              "Name" => ""
+            },
+            "To" => [
+              %{
+                "Email" => "receiver@example.com",
+                "Name" => ""
+              }
+            ],
+            "Subject" => "Hello, world!",
+            "TemplateID" => "template id",
+            "TemplateLanguage" => true,
+            "Variables" => %{
+              "firstname" => "Pan",
+              "lastname" => "Michal"
+            },
+            "Headers" => %{}
+          }
+        ]
+      }
+
+      assert body_params == conn.body_params
+      assert "/send" == conn.request_path
+      assert "POST" == conn.method
+
+      Plug.Conn.resp(conn, 200, @success_response)
+    end)
+
+    email =
+      email
+      |> put_provider_option(:variables, %{firstname: "Pan", lastname: "Michal"})
+      |> put_provider_option(:template_id, "template id")
+
+    assert Mailjet.deliver(email, config) == {:ok, %{id: 123_456_789}}
+  end
+
   test "delivery/1 - single 4xx error response from Send API", %{
     bypass: bypass,
     config: config,
